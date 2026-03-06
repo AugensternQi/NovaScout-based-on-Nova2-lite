@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "ShopSense AI",
+  "version": "1.0.0",
+  "description": "AI shopping assistant Chrome extension.",
+  "permissions": ["activeTab"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
