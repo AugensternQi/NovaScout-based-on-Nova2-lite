@@ -20,7 +20,7 @@ function extractAmazonProductData() {
   return {
     title: productTitle,
     price,
-    reviews: reviews.join(" "),
+    reviews,
   };
 }
 

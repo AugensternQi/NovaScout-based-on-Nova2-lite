@@ -1,6 +1,12 @@
 const summarizeBtn = document.getElementById("summarizeBtn");
+const chatBtn = document.getElementById("chatBtn");
 const loadingSpinner = document.getElementById("loadingSpinner");
 const resultEl = document.getElementById("result");
+const chatHistoryEl = document.getElementById("chatHistory");
+const chatInputEl = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+
+let cachedProductData = null;
 
 function setLoading(isLoading) {
   loadingSpinner.classList.toggle("hidden", !isLoading);
@@ -109,6 +115,33 @@ function formatResult(text) {
   return htmlParts.join("");
 }
 
+function setSummaryStatus(message) {
+  resultEl.innerHTML = `<p class="status-text">${escapeHtml(message)}</p>`;
+}
+
+function appendChatBubble(role, text, isError = false) {
+  const bubble = document.createElement("div");
+  bubble.classList.add("chat-bubble");
+  bubble.classList.add(role === "user" ? "user" : "assistant");
+  if (isError) {
+    bubble.classList.add("error");
+  }
+
+  if (role === "assistant" && !isError) {
+    bubble.innerHTML = formatResult(text);
+  } else {
+    bubble.textContent = text;
+  }
+
+  chatHistoryEl.appendChild(bubble);
+  chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+}
+
+function setSendLoading(isLoading) {
+  sendBtn.disabled = isLoading;
+  sendBtn.textContent = isLoading ? "Sending..." : "Send";
+}
+
 async function getActiveTab() {
   return new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -171,32 +204,56 @@ async function extractProductDataFromTab(tab) {
   }
 }
 
-function validateProductData(payload) {
+function normalizeProductData(payload) {
   if (!payload || !payload.title) {
     throw new Error("Could not find product title on this page.");
   }
-  if (!payload.reviews) {
+
+  const rawReviews = Array.isArray(payload.reviews)
+    ? payload.reviews
+    : String(payload.reviews || "")
+        .split(/\n+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+  if (rawReviews.length === 0) {
     throw new Error("Could not find review text on this page.");
   }
+
+  return {
+    title: payload.title,
+    price: payload.price || "",
+    reviewsList: rawReviews,
+    reviewsText: rawReviews.join(" "),
+  };
+}
+
+async function loadProductData() {
+  const activeTab = await getActiveTab();
+  const productData = await extractProductDataFromTab(activeTab);
+  cachedProductData = normalizeProductData(productData);
+  return cachedProductData;
 }
 
 async function summarizeCurrentProduct() {
   setLoading(true);
-  resultEl.innerHTML = '<p class="text-slate-500">Reading product data from the current tab...</p>';
+  setSummaryStatus("Reading product data from the current tab...");
 
   try {
-    const activeTab = await getActiveTab();
-    const productData = await extractProductDataFromTab(activeTab);
-    validateProductData(productData);
+    const productData = await loadProductData();
 
-    resultEl.innerHTML = '<p class="text-slate-500">Waiting for AI response...</p>';
+    setSummaryStatus("Waiting for AI response...");
 
     const response = await fetch("http://localhost:8000/api/analyze", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(productData),
+      body: JSON.stringify({
+        title: productData.title,
+        price: productData.price,
+        reviews: productData.reviewsText,
+      }),
     });
 
     if (!response.ok) {
@@ -229,4 +286,58 @@ async function summarizeCurrentProduct() {
   }
 }
 
+async function chatWithReviews() {
+  const question = chatInputEl.value.trim();
+  if (!question) {
+    appendChatBubble("assistant", "Please enter a question first.", true);
+    return;
+  }
+
+  appendChatBubble("user", question);
+  chatInputEl.value = "";
+  setSendLoading(true);
+  try {
+    const productData = cachedProductData || (await loadProductData());
+
+    const response = await fetch("http://localhost:8000/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        question,
+        context_reviews: productData.reviewsList,
+      }),
+    });
+
+    if (!response.ok) {
+      let detailText = "";
+      try {
+        const errorPayload = await response.json();
+        detailText = errorPayload?.detail ? `: ${errorPayload.detail}` : "";
+      } catch (_err) {
+        // Keep default detailText when response is not JSON.
+      }
+      throw new Error(`Request failed with status ${response.status}${detailText}`);
+    }
+
+    const payload = await response.json();
+    appendChatBubble("assistant", payload.answer || "No answer returned.");
+  } catch (error) {
+    appendChatBubble("assistant", `Network error: ${error.message || "Unknown error"}`, true);
+  } finally {
+    setSendLoading(false);
+  }
+}
+
 summarizeBtn.addEventListener("click", summarizeCurrentProduct);
+chatBtn.addEventListener("click", () => {
+  chatInputEl.focus();
+});
+sendBtn.addEventListener("click", chatWithReviews);
+chatInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    chatWithReviews();
+  }
+});
