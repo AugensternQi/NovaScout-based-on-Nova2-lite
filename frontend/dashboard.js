@@ -353,11 +353,76 @@ function renderCompareLoading() {
   `;
 }
 
+function buildDynamicDimensions(productA, productB) {
+  const contextText = [
+    productA.productName,
+    productA.summary,
+    (productA.reviews || []).join(" "),
+    productB.productName,
+    productB.summary,
+    (productB.reviews || []).join(" "),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  const profiles = [
+    {
+      keywords: ["drink", "beverage", "soda", "energy", "caffeine", "flavor", "sugar", "calorie"],
+      dimensions: ["Price", "Flavor", "Sweetness", "Energy Effect", "Ingredients", "Value"],
+    },
+    {
+      keywords: ["monitor", "display", "refresh", "hz", "resolution", "ips", "hdr", "gaming"],
+      dimensions: ["Price", "Resolution", "Refresh Rate", "Color Quality", "Ports & Connectivity", "Value"],
+    },
+    {
+      keywords: ["headphone", "earbud", "noise cancellation", "anc", "audio", "battery", "comfort"],
+      dimensions: ["Price", "Sound Quality", "Noise Cancellation", "Battery Life", "Comfort", "Value"],
+    },
+    {
+      keywords: ["shoe", "sneaker", "boot", "bag", "backpack", "fabric", "size", "fit"],
+      dimensions: ["Price", "Build Quality", "Comfort/Fit", "Capacity/Storage", "Durability", "Value"],
+    },
+    {
+      keywords: ["cream", "serum", "skincare", "sensitive skin", "moisturizer", "ingredient"],
+      dimensions: ["Price", "Ingredients", "Skin Compatibility", "Texture/Absorption", "Irritation Risk", "Value"],
+    },
+    {
+      keywords: ["laptop", "phone", "tablet", "cpu", "gpu", "ram", "storage", "battery"],
+      dimensions: ["Price", "Performance", "Battery Life", "Display", "Build Quality", "Value"],
+    },
+  ];
+
+  let bestMatch = null;
+  let bestScore = 0;
+  for (const profile of profiles) {
+    let score = 0;
+    for (const keyword of profile.keywords) {
+      if (contextText.includes(keyword)) {
+        score += 1;
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = profile;
+    }
+  }
+
+  if (bestMatch && bestScore > 0) {
+    return bestMatch.dimensions;
+  }
+
+  return ["Price", "Core Features", "Build Quality", "Performance", "User Experience", "Value"];
+}
+
 function buildComparePrompt(productA, productB) {
   const chatA = productA.chatHistory.map((m, idx) => `${idx + 1}. [${m.role}] ${m.text}`).join("\n");
   const chatB = productB.chatHistory.map((m, idx) => `${idx + 1}. [${m.role}] ${m.text}`).join("\n");
   const reviewsA = (productA.reviews || []).map((r, idx) => `${idx + 1}. ${r}`).join("\n");
   const reviewsB = (productB.reviews || []).map((r, idx) => `${idx + 1}. ${r}`).join("\n");
+  const dimensions = buildDynamicDimensions(productA, productB);
+  const diffTemplate = dimensions
+    .map((dim) => [dim, "A: ...", "B: ...", ""].join("\n"))
+    .join("\n");
   const productAData = [
     `Price: ${productA.price || "Unknown"}`,
     `Summary: ${productA.summary || "No summary stored."}`,
@@ -404,25 +469,9 @@ function buildComparePrompt(productA, productB) {
     "",
     "⚖️ Key Differences",
     "",
-    "Price",
-    "A: ...",
-    "B: ...",
+    `Use these dimensions exactly in order: ${dimensions.join(", ")}`,
     "",
-    "Flavor",
-    "A: ...",
-    "B: ...",
-    "",
-    "Energy",
-    "A: ...",
-    "B: ...",
-    "",
-    "Ingredients",
-    "A: ...",
-    "B: ...",
-    "",
-    "Value",
-    "A: ...",
-    "B: ...",
+    diffTemplate,
     "",
     "⚠️ Drawbacks",
     "",
