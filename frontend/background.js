@@ -1,5 +1,5 @@
 async function sendToggleMessage(tabId) {
-  return chrome.tabs.sendMessage(tabId, { type: "TOGGLE_SHOPSENSE_WIDGET" });
+  return chrome.tabs.sendMessage(tabId, { type: "TOGGLE_NOVASCOUT_WIDGET" });
 }
 
 async function injectContentScript(tabId) {
@@ -22,7 +22,7 @@ chrome.action.onClicked.addListener(async (tab) => {
       await sendToggleMessage(tab.id);
     } catch (finalErr) {
       // Keep a minimal log for debugging in service worker console.
-      console.error("ShopSense toggle failed:", finalErr);
+      console.error("NovaScout toggle failed:", finalErr);
     }
   }
 });

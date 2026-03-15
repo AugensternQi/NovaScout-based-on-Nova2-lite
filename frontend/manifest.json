@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ShopSense AI",
+  "name": "NovaScout",
   "version": "1.0.0",
   "description": "AI shopping assistant Chrome extension.",
   "permissions": ["activeTab", "scripting", "storage"],
@@ -38,6 +38,6 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "ShopSense AI"
+    "default_title": "NovaScout"
   }
 }

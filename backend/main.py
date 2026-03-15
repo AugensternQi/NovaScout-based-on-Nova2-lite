@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-app = FastAPI(title="ShopSense AI Backend")
+app = FastAPI(title="NovaScout Backend")
 
 app.add_middleware(
     CORSMiddleware,

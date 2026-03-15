@@ -1,6 +1,6 @@
 const BACKEND_BASE_URL = "http://localhost:8000";
-const STYLE_ID = "shopsense-widget-style";
-const ROOT_ID = "shopsense-widget-root";
+const STYLE_ID = "novascout-widget-style";
+const ROOT_ID = "novascout-widget-root";
 
 let widgetRootEl = null;
 let cachedProductData = null;
@@ -77,8 +77,8 @@ function ensureStyles() {
     }
     .ss-panel {
       width: 360px;
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
+      background: #fff8e8;
+      border: 1px solid #f0c14b;
       border-radius: 14px;
       box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
       overflow: hidden;
@@ -88,8 +88,8 @@ function ensureStyles() {
       align-items: center;
       gap: 10px;
       padding: 10px 12px;
-      background: #eef2ff;
-      border-bottom: 1px solid #c7d2fe;
+      background: #ff9900;
+      border-bottom: 1px solid #f0c14b;
       cursor: grab;
       user-select: none;
     }
@@ -101,7 +101,7 @@ function ensureStyles() {
       height: 24px;
       border: none;
       border-radius: 999px;
-      background: #e2e8f0;
+      background: #f3f3f3;
       color: #0f172a;
       font-size: 16px;
       line-height: 1;
@@ -111,14 +111,14 @@ function ensureStyles() {
     .ss-title {
       font-size: 14px;
       font-weight: 700;
-      color: #3730a3;
+      color: #111827;
     }
     .ss-body {
       padding: 12px;
     }
     .ss-subtitle {
       margin: 0 0 10px;
-      color: #64748b;
+      color: #6b4f1d;
       font-size: 12px;
     }
     .ss-btn {
@@ -135,8 +135,11 @@ function ensureStyles() {
       cursor: not-allowed;
     }
     .ss-btn-primary {
-      background: #4f46e5;
-      color: #fff;
+      background: #ff9900;
+      color: #111827;
+    }
+    .ss-btn-primary:hover {
+      background: #e88a00;
     }
     .ss-btn-secondary {
       margin-top: 8px;
@@ -148,9 +151,9 @@ function ensureStyles() {
       min-height: 56px;
       max-height: 170px;
       overflow-y: auto;
-      border: 1px solid #dbeafe;
+      border: 1px solid #f0c14b;
       border-radius: 10px;
-      background: #ffffff;
+      background: #fffdf7;
       padding: 10px;
       font-size: 13px;
       line-height: 1.5;
@@ -162,8 +165,8 @@ function ensureStyles() {
       padding: 8px;
     }
     .ss-result-card.success {
-      border-color: #c7d2fe;
-      background: #eef2ff;
+      border-color: #f0c14b;
+      background: #fff2cc;
     }
     .ss-result-card.error {
       border-color: #fecaca;
@@ -176,7 +179,7 @@ function ensureStyles() {
       font-weight: 700;
       letter-spacing: 0.07em;
       text-transform: uppercase;
-      color: #4338ca;
+      color: #8a5a00;
     }
     .ss-status-text {
       margin: 0;
@@ -203,23 +206,23 @@ function ensureStyles() {
     }
     .ss-chat-shell {
       margin-top: 10px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #f0c14b;
       border-radius: 10px;
-      background: #fff;
+      background: #fffdf4;
       padding: 8px;
     }
     .ss-chat-title {
       margin: 0 0 6px;
       font-size: 12px;
-      color: #64748b;
+      color: #334155;
     }
     .ss-chat-history {
       min-height: 100px;
       max-height: 180px;
       overflow-y: auto;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #f0c14b;
       border-radius: 8px;
-      background: #f8fafc;
+      background: #fff8ea;
       padding: 8px;
     }
     .ss-bubble {
@@ -234,14 +237,14 @@ function ensureStyles() {
     }
     .ss-bubble.user {
       margin-left: auto;
-      background: #4f46e5;
+      background: #232f3e;
       color: #fff;
       border-bottom-right-radius: 4px;
     }
     .ss-bubble.assistant {
       margin-right: auto;
-      background: #eef2ff;
-      color: #1e1b4b;
+      background: #fdecc8;
+      color: #4a3a16;
       border-bottom-left-radius: 4px;
     }
     .ss-bubble.error {
@@ -263,18 +266,21 @@ function ensureStyles() {
       outline: none;
     }
     .ss-chat-input:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      border-color: #f0c14b;
+      box-shadow: 0 0 0 3px rgba(240, 193, 75, 0.3);
     }
     .ss-send-btn {
       border: none;
       border-radius: 8px;
-      background: #111827;
-      color: #fff;
+      background: #ff9900;
+      color: #111827;
       padding: 0 12px;
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
+    }
+    .ss-send-btn:hover {
+      background: #e88a00;
     }
     .ss-send-btn:disabled {
       opacity: 0.65;
@@ -660,7 +666,7 @@ function buildWidget() {
     <div class="ss-panel">
       <div class="ss-header" data-ss="header">
         <button class="ss-close" data-ss="close-btn" title="Close">×</button>
-        <span class="ss-title">ShopSense AI</span>
+        <span class="ss-title">NovaScout</span>
       </div>
       <div class="ss-body">
         <p class="ss-subtitle">Drag this window and chat with product reviews.</p>
@@ -724,7 +730,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === "TOGGLE_SHOPSENSE_WIDGET") {
+  if (message.type === "TOGGLE_NOVASCOUT_WIDGET") {
     toggleWidget();
     sendResponse({ success: true });
     return true;
