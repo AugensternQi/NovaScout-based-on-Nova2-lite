@@ -56,6 +56,30 @@ function extractSummary(raw) {
   return summary ? summary.trim() : "";
 }
 
+function extractPrice(raw) {
+  if (!raw || typeof raw !== "object") {
+    return "";
+  }
+  const candidates = [raw.price, raw.currentPrice, raw.productPrice];
+  const price = candidates.find((item) => typeof item === "string" && item.trim());
+  return price ? price.trim() : "";
+}
+
+function extractReviews(raw) {
+  if (!raw || typeof raw !== "object") {
+    return [];
+  }
+  const pools = [raw.reviews, raw.reviewList, raw.context_reviews, raw.review];
+  for (const pool of pools) {
+    const arr = toArray(pool).map((item) => String(item).trim()).filter(Boolean);
+    if (arr.length) {
+      // Keep context compact and stable for PK requests.
+      return arr.slice(0, 20);
+    }
+  }
+  return [];
+}
+
 function parseChatMessage(item) {
   if (!item) {
     return null;
@@ -132,8 +156,12 @@ function normalizeStorageRecords(allData) {
     .map(([productName, raw]) => {
       const summary = extractSummary(raw);
       const chatHistory = extractChatHistory(raw);
+      const price = extractPrice(raw);
+      const reviews = extractReviews(raw);
       return {
         productName,
+        price,
+        reviews,
         summary,
         chatHistory,
         raw,
@@ -328,13 +356,21 @@ function renderCompareLoading() {
 function buildComparePrompt(productA, productB) {
   const chatA = productA.chatHistory.map((m, idx) => `${idx + 1}. [${m.role}] ${m.text}`).join("\n");
   const chatB = productB.chatHistory.map((m, idx) => `${idx + 1}. [${m.role}] ${m.text}`).join("\n");
+  const reviewsA = (productA.reviews || []).map((r, idx) => `${idx + 1}. ${r}`).join("\n");
+  const reviewsB = (productB.reviews || []).map((r, idx) => `${idx + 1}. ${r}`).join("\n");
   const productAData = [
+    `Price: ${productA.price || "Unknown"}`,
     `Summary: ${productA.summary || "No summary stored."}`,
+    "Reviews:",
+    reviewsA || "- No review snippets.",
     "Conversation:",
     chatA || "- No chat history.",
   ].join("\n");
   const productBData = [
+    `Price: ${productB.price || "Unknown"}`,
     `Summary: ${productB.summary || "No summary stored."}`,
+    "Reviews:",
+    reviewsB || "- No review snippets.",
     "Conversation:",
     chatB || "- No chat history.",
   ].join("\n");
@@ -351,6 +387,9 @@ function buildComparePrompt(productA, productB) {
     "- Avoid long explanations.",
     "- Make the structure easy to render as cards.",
     "- Focus on visual comparison.",
+    "- Use the provided reviews as primary evidence.",
+    "- Do NOT output '-' or 'N/A' for Drawbacks and Best For.",
+    "- If data is limited, provide a cautious but concrete inference based on available context.",
     "",
     "Input products:",
     `Product A: ${productA.productName}`,
@@ -467,12 +506,26 @@ function parseComparisonAnswer(answerText) {
       currentDimension = null;
       continue;
     }
-    if (line.startsWith("⚠️") || line.startsWith("⚠") || lower.includes("drawbacks") || line.includes("缺点")) {
+    if (
+      line.startsWith("⚠️") ||
+      line.startsWith("⚠") ||
+      lower.includes("drawbacks") ||
+      lower.includes("cons") ||
+      lower.includes("weakness") ||
+      line.includes("缺点")
+    ) {
       mode = "drawbacks";
       currentDimension = null;
       continue;
     }
-    if (line.startsWith("👤") || lower.includes("best for") || line.includes("适合")) {
+    if (
+      line.startsWith("👤") ||
+      lower.includes("best for") ||
+      lower.includes("ideal for") ||
+      lower.includes("who should buy") ||
+      lower.includes("recommended for") ||
+      line.includes("适合")
+    ) {
       mode = "bestfor";
       currentDimension = null;
       continue;
@@ -531,12 +584,36 @@ function parseComparisonAnswer(answerText) {
 
   const bestForIdx = parsed.differences.findIndex((item) => {
     const n = normalizeName(item.name);
-    return n.includes("bestfor") || n.includes("targetuser") || n.includes("who");
+    return (
+      n.includes("bestfor") ||
+      n.includes("targetuser") ||
+      n.includes("idealfor") ||
+      n.includes("recommendedfor") ||
+      n.includes("whoshouldbuy") ||
+      n.includes("who")
+    );
   });
   if (bestForIdx >= 0) {
     parsed.bestFor.A = parsed.bestFor.A || parsed.differences[bestForIdx].A || "";
     parsed.bestFor.B = parsed.bestFor.B || parsed.differences[bestForIdx].B || "";
     parsed.differences.splice(bestForIdx, 1);
+  }
+
+  // Final fallback: infer a lightweight value from existing difference rows.
+  const valueLike = parsed.differences.find((item) => /value|price|budget|performance/i.test(item.name));
+  if (valueLike) {
+    if (!parsed.bestFor.A || parsed.bestFor.A === "-") {
+      parsed.bestFor.A = `Users prioritizing ${valueLike.A || "overall value"}`;
+    }
+    if (!parsed.bestFor.B || parsed.bestFor.B === "-") {
+      parsed.bestFor.B = `Users prioritizing ${valueLike.B || "overall value"}`;
+    }
+  }
+  if (!parsed.drawbacks.A || parsed.drawbacks.A === "-") {
+    parsed.drawbacks.A = "Trade-offs depend on usage; check key differences above.";
+  }
+  if (!parsed.drawbacks.B || parsed.drawbacks.B === "-") {
+    parsed.drawbacks.B = "Trade-offs depend on usage; check key differences above.";
   }
 
   if (!parsed.differences.length) {
@@ -548,9 +625,13 @@ function parseComparisonAnswer(answerText) {
 async function requestComparison(productA, productB) {
   const question = buildComparePrompt(productA, productB);
   const contextReviews = [
+    `[${productA.productName}] Price: ${productA.price || "Unknown"}`,
     `[${productA.productName}] Summary: ${productA.summary || "No summary"}`,
+    ...((productA.reviews || []).map((r) => `[${productA.productName}] Review: ${r}`)),
     ...productA.chatHistory.map((m) => `[${productA.productName}] ${m.role}: ${m.text}`),
+    `[${productB.productName}] Price: ${productB.price || "Unknown"}`,
     `[${productB.productName}] Summary: ${productB.summary || "No summary"}`,
+    ...((productB.reviews || []).map((r) => `[${productB.productName}] Review: ${r}`)),
     ...productB.chatHistory.map((m) => `[${productB.productName}] ${m.role}: ${m.text}`),
   ];
 

@@ -6,6 +6,15 @@ let widgetRootEl = null;
 let cachedProductData = null;
 let dragState = null;
 
+function isContextInvalidatedError(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return message.includes("extension context invalidated");
+}
+
+function getContextInvalidatedHint() {
+  return "Extension context invalidated. Please refresh this page, then reopen NovaScout.";
+}
+
 function getStorageByKey(key) {
   return new Promise((resolve, reject) => {
     chrome.storage.local.get([key], (result) => {
@@ -545,11 +554,20 @@ async function summarizeCurrentProduct() {
 
     const payload = await response.json();
     const summaryText = payload.result || "No summary returned.";
-    await upsertProductHistory(cachedProductData, {
-      summary: summaryText,
-    });
+    try {
+      await upsertProductHistory(cachedProductData, {
+        summary: summaryText,
+      });
+    } catch (persistError) {
+      // Don't fail the main summarize flow if extension storage context was reloaded.
+      console.warn("NovaScout storage persistence skipped:", persistError);
+    }
     renderSummaryResultSuccess(summaryText);
   } catch (error) {
+    if (isContextInvalidatedError(error)) {
+      renderSummaryResultError(getContextInvalidatedHint());
+      return;
+    }
     renderSummaryResultError(error.message || "Unknown error");
   } finally {
     setSummaryLoading(false);
@@ -603,14 +621,23 @@ async function chatWithReviews() {
     const answerText = payload.answer || "No answer returned.";
     appendChatBubble("assistant", answerText);
 
-    await upsertProductHistory(cachedProductData, {
-      chatHistory: [
-        ...((await getStorageByKey(cachedProductData.title))?.chatHistory || []),
-        { role: "user", text: question, timestamp: Date.now() },
-        { role: "assistant", text: answerText, timestamp: Date.now() },
-      ],
-    });
+    try {
+      await upsertProductHistory(cachedProductData, {
+        chatHistory: [
+          ...((await getStorageByKey(cachedProductData.title))?.chatHistory || []),
+          { role: "user", text: question, timestamp: Date.now() },
+          { role: "assistant", text: answerText, timestamp: Date.now() },
+        ],
+      });
+    } catch (persistError) {
+      // Keep chat response visible even when storage context is stale after extension reload.
+      console.warn("NovaScout chat persistence skipped:", persistError);
+    }
   } catch (error) {
+    if (isContextInvalidatedError(error)) {
+      appendChatBubble("assistant", getContextInvalidatedHint(), true);
+      return;
+    }
     appendChatBubble("assistant", `Network error: ${error.message || "Unknown error"}`, true);
   } finally {
     setSendLoading(false);
@@ -618,12 +645,30 @@ async function chatWithReviews() {
 }
 
 function openDashboardPage() {
-  chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD_PAGE" }, (response) => {
-    if (chrome.runtime.lastError || !response?.success) {
-      // Fallback in case the background worker is unavailable.
-      window.open(chrome.runtime.getURL("dashboard.html"), "_blank");
+  try {
+    chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD_PAGE" }, (response) => {
+      const runtimeError = chrome.runtime.lastError;
+      if (runtimeError) {
+        if (isContextInvalidatedError(runtimeError)) {
+          renderSummaryResultError(getContextInvalidatedHint());
+          return;
+        }
+        // Fallback in case the background worker is unavailable.
+        window.open(chrome.runtime.getURL("dashboard.html"), "_blank");
+        return;
+      }
+
+      if (!response?.success) {
+        window.open(chrome.runtime.getURL("dashboard.html"), "_blank");
+      }
+    });
+  } catch (error) {
+    if (isContextInvalidatedError(error)) {
+      renderSummaryResultError(getContextInvalidatedHint());
+      return;
     }
-  });
+    throw error;
+  }
 }
 
 function onDragStart(event) {
