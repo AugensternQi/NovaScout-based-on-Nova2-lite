@@ -1,6 +1,6 @@
 # NovaScout
 
-![NovaScout Cover](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/WechatIMG4866-538fb81b-288b-4595-8785-d43ac9f00906.png)
+![Project Cover](Images/Project_cover.jpg)
 
 NovaScout is a Chrome extension + FastAPI app powered by Amazon Bedrock for product intelligence on Amazon pages.
 
@@ -86,13 +86,13 @@ ShopSence-based-on-Nova2-lite/
 
 ### Widget View
 
-![Widget View](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/image-974e667b-a8eb-4817-b6c4-704a08803e8b.png)
+![Extension Layout](Images/Sample_extension_layout.jpg)
 
 ### Dashboard - Product PK
 
-![Dashboard Product PK - Top](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/image-e3aed019-b503-4699-8d11-72200bfa8def.png)
+![Product Example 1](Images/Sample_ProductPK1.jpg)
 
-![Dashboard Product PK - Table & Insights](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/image-44583f8f-2334-4acb-8609-7abaf67c9703.png)
+![Product Example 2](Images/Sample_ProductPK2.jpg)
 
 ---
 
