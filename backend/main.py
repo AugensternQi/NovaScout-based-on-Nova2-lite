@@ -106,4 +106,3 @@ def chat_with_reviews(payload: ChatRequest) -> dict[str, str]:
         raise HTTPException(status_code=500, detail=f"Bedrock request failed: {exc}") from exc
 
     return {"answer": output_text}
-    
