@@ -1,6 +1,12 @@
 # NovaScout
 
+![NovaScout Cover](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/WechatIMG4866-538fb81b-288b-4595-8785-d43ac9f00906.png)
+
 NovaScout is a Chrome extension + FastAPI app powered by Amazon Bedrock for product intelligence on Amazon pages.
+
+### 3-Minute Demo Video
+
+[Watch on YouTube](https://youtu.be/fm6O3CD6oHo)
 
 Core capabilities:
 
@@ -76,35 +82,17 @@ ShopSence-based-on-Nova2-lite/
 
 ---
 
-## 3) View Placeholders (Text-Only)
+## 3) Product Views (Screenshots)
 
-> No screenshots. Use these placeholders in docs/demo slides.
+### Widget View
 
-- `[Widget View]`
-  - Header: `NovaScout`
-  - Buttons: `Summarize Current Product`, `Open Dashboard`
-  - Section: `Chat with Reviews`
+![Widget View](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/image-974e667b-a8eb-4817-b6c4-704a08803e8b.png)
 
-- `[Dashboard - Sidebar]`
-  - Product history list
-  - Multi-select checkboxes
-  - `Compare Selected` button
-  - `Clear All History` button
+### Dashboard - Product PK
 
-- `[Dashboard - Main Default]`
-  - Welcome message
-  - Stats cards
+![Dashboard Product PK - Top](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/image-e3aed019-b503-4699-8d11-72200bfa8def.png)
 
-- `[Dashboard - Product Detail]`
-  - Product title
-  - AI summary panel
-  - Conversation history panel
-
-- `[Dashboard - Product PK]`
-  - AI Verdict card
-  - Key Differences cards
-  - Comparison table (A vs B)
-  - Drawbacks and Best For cards
+![Dashboard Product PK - Table & Insights](/Users/augensternqi/.cursor/projects/Users-augensternqi-ShopSence-based-on-Nova2-lite/assets/image-44583f8f-2334-4acb-8609-7abaf67c9703.png)
 
 ---
 
